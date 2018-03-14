@@ -1,7 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
-import { CIRCLE, FREE_LINE, RECTANGLE, STRAIGHT_LINE } from '../actions';
+import { CIRCLE, FILL, FREE_LINE, RECTANGLE, STRAIGHT_LINE } from '../actions';
 
 const ToolsBar =
   ({
@@ -15,8 +15,11 @@ const ToolsBar =
     }
 
     function handleStrokeSizeChange(e) {
-      console.log(e.target);
       changeStrokeSize(e.target.value);
+    }
+
+    function handleFill() {
+      selectTool(FILL);
     }
 
     return (
@@ -84,12 +87,9 @@ const ToolsBar =
           />
           {strokeSize}
         </div>
-        {/*<div className="coordinates">*/}
-        {/*<h1>{xStart},{yStart}</h1>*/}
-        {/*</div>*/}
-        {/*<div>*/}
-        {/*<button onClick={App.resetCanvas}>RESET</button>*/}
-        {/*</div>*/}
+        <div>
+          <button onClick={handleFill}>fill</button>
+        </div>
       </div>
     );
   };

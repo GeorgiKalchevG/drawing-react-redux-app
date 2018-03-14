@@ -1,14 +1,27 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { CIRCLE, FREE_LINE, RECTANGLE, STRAIGHT_LINE } from '../actions/index';
+import {
+  CIRCLE,
+  FILL,
+  FREE_LINE,
+  RECTANGLE,
+  STRAIGHT_LINE,
+} from '../actions/index';
+
+const numberOfElementsToExtract = 20;
 
 class DrawingArea extends React.Component {
+  static extractLast(array, numberOfElements) {
+    return array.slice(array.length - numberOfElements);
+  }
+
   constructor(props) {
     super(props);
     this.state = {
       ctx: {},
       shouldDraw: false,
-      imageArray: [],
+      undoImageArray: [],
+      redoImageArray: [],
       width: 0,
       height: 0,
       xStart: 0,
@@ -26,6 +39,7 @@ class DrawingArea extends React.Component {
     this.handleMouseDown = this.handleMouseDown.bind(this);
     this.handleMouseUp = this.handleMouseUp.bind(this);
     this.handleUndo = this.handleUndo.bind(this);
+    this.handleRedo = this.handleRedo.bind(this);
   }
 
   componentWillMount() {
@@ -43,11 +57,11 @@ class DrawingArea extends React.Component {
   onMouseMove(e) {
     const xCurr = e.nativeEvent.offsetX;
     const yCurr = e.nativeEvent.offsetY;
-    // console.log(xCurr, yCurr);
-    const { shouldDraw, ctx, imageArray } = this.state;
+
+    const { shouldDraw, ctx, undoImageArray } = this.state;
     const { tool } = this.props;
     if (shouldDraw) {
-      ctx.putImageData(imageArray[imageArray.length - 1], 0, 0);
+      ctx.putImageData(undoImageArray[undoImageArray.length - 1], 0, 0);
       this.draw(tool, xCurr, yCurr, ctx);
     }
   }
@@ -55,20 +69,21 @@ class DrawingArea extends React.Component {
   handleMouseDown(e) {
     const xStart = e.nativeEvent.offsetX;
     const yStart = e.nativeEvent.offsetY;
-    console.log(xStart, yStart);
     const {
       ctx,
       width,
       height,
-      imageArray,
+      undoImageArray,
     } = this.state;
-    ctx.putImageData(imageArray[imageArray.length - 1], width, height);
+    ctx.putImageData(undoImageArray[undoImageArray.length - 1], width, height);
     ctx.lineWidth = this.props.strokeSize;
+    ctx.strokeStyle = 'blue';
     this.setState({
       xStart,
       yStart,
       shouldDraw: true,
     });
+    console.log(xStart, yStart);
   }
 
   handleMouseUp(e) {
@@ -80,27 +95,48 @@ class DrawingArea extends React.Component {
     ctx.beginPath();
     this.setState({
       shouldDraw: false,
-      imageArray,
+      undoImageArray: imageArray,
       xEnd,
       yEnd,
     });
   }
 
   handleUndo() {
-    const { imageArray, ctx } = this.state;
-    if (imageArray.length > 1) {
-      console.log(imageArray.length);
-      imageArray.pop();
+    const { undoImageArray, ctx, redoImageArray } = this.state;
+    if (undoImageArray.length > 1) {
+      const newRedoArray = DrawingArea.extractLast(
+        redoImageArray,
+        numberOfElementsToExtract,
+      );
+
+      newRedoArray.push(undoImageArray.pop());
       this.setState({
-        imageArray,
+        undoImageArray,
+        redoImageArray: newRedoArray,
       });
-      ctx.putImageData(imageArray[imageArray.length - 1], 0, 0);
-    } else {
-      console.log(imageArray);
+      ctx.putImageData(undoImageArray[undoImageArray.length - 1], 0, 0);
+    }
+  }
+
+  handleRedo() {
+    const { undoImageArray, ctx, redoImageArray } = this.state;
+
+    if (redoImageArray.length > 0) {
+      const newUndoArray = DrawingArea.extractLast(
+        undoImageArray,
+        numberOfElementsToExtract,
+      );
+      newUndoArray.push(redoImageArray.pop());
+      this.setState({
+        redoImageArray,
+        undoImageArray: newUndoArray,
+      });
+      ctx.putImageData(newUndoArray[newUndoArray.length - 1], 0, 0);
     }
   }
 
   draw(tool, xCurr, yCurr, ctx) {
+    console.log(tool);
     switch (tool) {
       case CIRCLE:
         this.drawCircle(xCurr, yCurr, ctx);
@@ -113,6 +149,9 @@ class DrawingArea extends React.Component {
         break;
       case FREE_LINE:
         this.drawFreeLine(xCurr, yCurr, ctx);
+        break;
+      case FILL:
+        this.fillSpace(xCurr, yCurr, ctx);
         break;
       default:
         console.log('ERROR');
@@ -145,6 +184,7 @@ class DrawingArea extends React.Component {
 
   drawFreeLine(x, y, ctx) {
     const { width, height } = this.state;
+    ctx.lineJoin = 'bevel';
     ctx.lineTo(x, y);
     ctx.stroke();
     ctx.beginPath();
@@ -152,17 +192,22 @@ class DrawingArea extends React.Component {
     ctx.moveTo(x, y);
 
     const imageArray = this.updateImageArray(ctx, width, height);
-    this.setState({ imageArray });
+    this.setState({ undoImageArray: imageArray });
+  }
+
+  fillSpace(xCurr, yCurr, ctx) {
+    const pixel = ctx.getImageData(xCurr, yCurr, 1, 1);
+    console.log('pixel ', pixel);
   }
 
   updateImageArray(ctx, width, height) {
-    const { imageArray } = this.state;
-    console.log('before update', imageArray);
-    const newImageArray = imageArray.slice(
-      imageArray.length - 10,
+    const { undoImageArray } = this.state;
 
+    const newImageArray = DrawingArea.extractLast(
+      undoImageArray,
+      numberOfElementsToExtract,
     );
-    console.log(imageArray);
+
     newImageArray.push(ctx.getImageData(0, 0, width, height));
     return newImageArray;
   }
@@ -179,7 +224,7 @@ class DrawingArea extends React.Component {
       this.canvasContainer.offsetHeight,
     );
 
-    this.setState({ ctx, imageArray });
+    this.setState({ ctx, undoImageArray: imageArray });
   }
 
   updateDimensions() {
@@ -224,10 +269,8 @@ class DrawingArea extends React.Component {
           <br />
           {strokeSize}&lt;--&gt;{tool}
         </div>
-
+        <button onClick={this.handleRedo}>Redo</button>
         <button onClick={this.handleUndo}>Undo</button>
-        |
-        <button>Redo</button>
       </div>
     );
   }

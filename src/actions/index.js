@@ -19,3 +19,4 @@ export const STRAIGHT_LINE = 'STRAIGHT_LINE';
 export const RECTANGLE = 'RECTANGLE';
 export const FREE_LINE = 'FREE_LINE';
 export const CIRCLE = 'CIRCLE';
+export const FILL = 'FILL';
