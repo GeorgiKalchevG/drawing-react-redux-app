@@ -1,21 +1,17 @@
 import React from 'react';
-import ToolsBar from './containers/ToolsBar';
+import ToolsBar from './containers/ToolsBarContainer';
 import './App.css';
-import DrawingArea from './containers/DrawingArea';
+import DrawingArea from './containers/DrawingAreaContainer';
 
-class App extends React.Component {
-    render() {
-        return (
-            <div className="App">
-                <header className="App-header">
-                    <ToolsBar/>
-                </header>
-                <div className="App-main">
-                    <DrawingArea/>
-                </div>
-            </div>
-        );
-    }
-}
+const App = () => (
+  <div className="App">
+    <header className="App-header">
+      <ToolsBar />
+    </header>
+    <div className="App-main">
+      <DrawingArea />
+    </div>
+  </div>
+);
 
 export default App;
